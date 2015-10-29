@@ -117,19 +117,19 @@ class GithubWebhook extends \Kanboard\Core\Base
     {
         switch ($payload['action']) {
             case 'opened':
-                return $this->handleIssueOpened($payload['issue']);
+                return $this->handleIssueOpened($payload['issue'], $payload['repository']);
             case 'closed':
-                return $this->handleIssueClosed($payload['issue']);
+                return $this->handleIssueClosed($payload['issue'], $payload['repository']);
             case 'reopened':
-                return $this->handleIssueReopened($payload['issue']);
+                return $this->handleIssueReopened($payload['issue'], $payload['repository']);
             case 'assigned':
-                return $this->handleIssueAssigned($payload['issue']);
+                return $this->handleIssueAssigned($payload['issue'], $payload['repository']);
             case 'unassigned':
-                return $this->handleIssueUnassigned($payload['issue']);
+                return $this->handleIssueUnassigned($payload['issue'], $payload['repository']);
             case 'labeled':
-                return $this->handleIssueLabeled($payload['issue'], $payload['label']);
+                return $this->handleIssueLabeled($payload['issue'], $payload['label'], $payload['repository']);
             case 'unlabeled':
-                return $this->handleIssueUnlabeled($payload['issue'], $payload['label']);
+                return $this->handleIssueUnlabeled($payload['issue'], $payload['label'], $payload['repository']);
         }
 
         return false;
@@ -179,11 +179,11 @@ class GithubWebhook extends \Kanboard\Core\Base
      * @param  array    $issue   Issue data
      * @return boolean
      */
-    public function handleIssueOpened(array $issue)
+    public function handleIssueOpened(array $issue, array $repository)
     {
         $event = array(
             'project_id' => $this->project_id,
-            'reference' => $issue['number'],
+            'reference' => $repository['full_name']."_".$issue['number'],
             'title' => $issue['title'],
             'description' => $issue['body']."\n\n[".t('Github Issue').']('.$issue['html_url'].')',
         );
@@ -203,7 +203,7 @@ class GithubWebhook extends \Kanboard\Core\Base
      * @param  array    $issue   Issue data
      * @return boolean
      */
-    public function handleIssueClosed(array $issue)
+    public function handleIssueClosed(array $issue, array $repository)
     {
         $task = $this->taskFinder->getByReference($this->project_id, $issue['number']);
 
@@ -211,7 +211,7 @@ class GithubWebhook extends \Kanboard\Core\Base
             $event = array(
                 'project_id' => $this->project_id,
                 'task_id' => $task['id'],
-                'reference' => $issue['number'],
+                'reference' => $repository['full_name']."_".$issue['number'],
             );
 
             $this->container['dispatcher']->dispatch(
@@ -232,7 +232,7 @@ class GithubWebhook extends \Kanboard\Core\Base
      * @param  array    $issue   Issue data
      * @return boolean
      */
-    public function handleIssueReopened(array $issue)
+    public function handleIssueReopened(array $issue, array $repository)
     {
         $task = $this->taskFinder->getByReference($this->project_id, $issue['number']);
 
@@ -240,7 +240,7 @@ class GithubWebhook extends \Kanboard\Core\Base
             $event = array(
                 'project_id' => $this->project_id,
                 'task_id' => $task['id'],
-                'reference' => $issue['number'],
+                'reference' => $repository['full_name']."_".$issue['number'],
             );
 
             $this->container['dispatcher']->dispatch(
@@ -261,7 +261,7 @@ class GithubWebhook extends \Kanboard\Core\Base
      * @param  array    $issue   Issue data
      * @return boolean
      */
-    public function handleIssueAssigned(array $issue)
+    public function handleIssueAssigned(array $issue, array $repository)
     {
         $user = $this->user->getByUsername($issue['assignee']['login']);
         $task = $this->taskFinder->getByReference($this->project_id, $issue['number']);
@@ -271,7 +271,7 @@ class GithubWebhook extends \Kanboard\Core\Base
                 'project_id' => $this->project_id,
                 'task_id' => $task['id'],
                 'owner_id' => $user['id'],
-                'reference' => $issue['number'],
+                'reference' => $repository['full_name']."_".$issue['number'],
             );
 
             $this->container['dispatcher']->dispatch(
@@ -292,7 +292,7 @@ class GithubWebhook extends \Kanboard\Core\Base
      * @param  array    $issue   Issue data
      * @return boolean
      */
-    public function handleIssueUnassigned(array $issue)
+    public function handleIssueUnassigned(array $issue, array $repository)
     {
         $task = $this->taskFinder->getByReference($this->project_id, $issue['number']);
 
@@ -301,7 +301,7 @@ class GithubWebhook extends \Kanboard\Core\Base
                 'project_id' => $this->project_id,
                 'task_id' => $task['id'],
                 'owner_id' => 0,
-                'reference' => $issue['number'],
+                'reference' => $repository['full_name']."_".$issue['number'],
             );
 
             $this->container['dispatcher']->dispatch(
@@ -323,7 +323,7 @@ class GithubWebhook extends \Kanboard\Core\Base
      * @param  array    $label   Label data
      * @return boolean
      */
-    public function handleIssueLabeled(array $issue, array $label)
+    public function handleIssueLabeled(array $issue, array $label, array $repository)
     {
         $task = $this->taskFinder->getByReference($this->project_id, $issue['number']);
 
@@ -331,7 +331,7 @@ class GithubWebhook extends \Kanboard\Core\Base
             $event = array(
                 'project_id' => $this->project_id,
                 'task_id' => $task['id'],
-                'reference' => $issue['number'],
+                'reference' => $repository['full_name']."_".$issue['number'],
                 'label' => $label['name'],
             );
 
@@ -354,7 +354,7 @@ class GithubWebhook extends \Kanboard\Core\Base
      * @param  array    $label   Label data
      * @return boolean
      */
-    public function handleIssueUnlabeled(array $issue, array $label)
+    public function handleIssueUnlabeled(array $issue, array $label, array $repository)
     {
         $task = $this->taskFinder->getByReference($this->project_id, $issue['number']);
 
@@ -362,7 +362,7 @@ class GithubWebhook extends \Kanboard\Core\Base
             $event = array(
                 'project_id' => $this->project_id,
                 'task_id' => $task['id'],
-                'reference' => $issue['number'],
+                'reference' => $repository['full_name']."_".$issue['number'],
                 'label' => $label['name'],
                 'category_id' => 0,
             );
